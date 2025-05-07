@@ -1,0 +1,66 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to OnStar",
+        "description": "Set up your OnStar account to integrate with Home Assistant",
+        "data": {
+          "username": "[%key:common::config_flow::data::username%]",
+          "password": "[%key:common::config_flow::data::password%]",
+          "device_id": "Device ID (unique identifier for this device)",
+          "vin": "Vehicle Identification Number (VIN)",
+          "onstar_pin": "OnStar PIN (optional)",
+          "totp_secret": "TOTP Secret (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "remote_start": {
+        "name": "Remote Start"
+      },
+      "door_locked": {
+        "name": "Door Locked"
+      },
+      "trunk_locked": {
+        "name": "Trunk Locked"
+      }
+    },
+    "sensor": {
+      "fuel_level": {
+        "name": "Fuel Level"
+      },
+      "battery_level": {
+        "name": "Battery Level"
+      },
+      "oil_life": {
+        "name": "Oil Life"
+      },
+      "tire_pressure": {
+        "name": "Tire Pressure"
+      }
+    },
+    "switch": {
+      "remote_start": {
+        "name": "Remote Start"
+      }
+    },
+    "lock": {
+      "doors": {
+        "name": "Doors"
+      },
+      "trunk": {
+        "name": "Trunk"
+      }
+    }
+  }
+}

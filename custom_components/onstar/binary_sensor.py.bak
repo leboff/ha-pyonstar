@@ -1,0 +1,179 @@
+"""Support for OnStar binary sensors."""
+
+from __future__ import annotations
+
+import logging
+
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up the OnStar binary sensor platform."""
+    data = hass.data[DOMAIN][entry.entry_id]
+    coordinator = data["coordinator"]
+    vin = entry.data["vin"]
+
+    sensors = [
+        OnStarDoorStatusSensor(coordinator, vin),
+        OnStarTrunkStatusSensor(coordinator, vin),
+        OnStarHoodStatusSensor(coordinator, vin),
+    ]
+
+    # Add EV-specific sensors if available
+    if _is_electric_vehicle(coordinator):
+        sensors.append(OnStarPluggedInSensor(coordinator, vin))
+
+    async_add_entities(sensors, True)
+
+
+def _is_electric_vehicle(coordinator) -> bool:
+    """Determine if the vehicle is an EV based on the diagnostics data."""
+    if (
+        coordinator.data
+        and "diagnostics" in coordinator.data
+        and coordinator.data["diagnostics"]
+        and "commandResponse" in coordinator.data["diagnostics"]
+        and "body" in coordinator.data["diagnostics"]["commandResponse"]
+    ):
+        body = coordinator.data["diagnostics"]["commandResponse"]["body"]
+        # Check for EV-specific data
+        if "evStatus" in body or "batteryLevel" in body or "chargeStatus" in body:
+            return True
+    return False
+
+
+class OnStarBinarySensor(CoordinatorEntity, BinarySensorEntity):
+    """Representation of an OnStar binary sensor."""
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, vin, sensor_type):
+        """Initialize the binary sensor."""
+        super().__init__(coordinator)
+        self._vin = vin
+        self._sensor_type = sensor_type
+        self._attr_unique_id = f"{self._vin}_{sensor_type}"
+
+
+class OnStarDoorStatusSensor(OnStarBinarySensor):
+    """Representation of an OnStar door status sensor."""
+
+    _attr_name = "Doors Closed"
+    _attr_device_class = BinarySensorDeviceClass.DOOR
+
+    def __init__(self, coordinator, vin):
+        """Initialize the binary sensor."""
+        super().__init__(coordinator, vin, "doors_closed")
+
+    @property
+    def is_on(self):
+        """Return true if all doors are closed."""
+        if (
+            self.coordinator.data
+            and "diagnostics" in self.coordinator.data
+            and self.coordinator.data["diagnostics"]
+            and "commandResponse" in self.coordinator.data["diagnostics"]
+            and "body" in self.coordinator.data["diagnostics"]["commandResponse"]
+        ):
+            body = self.coordinator.data["diagnostics"]["commandResponse"]["body"]
+            if "doorStatus" in body:
+                # True if all doors are closed
+                doors = body["doorStatus"]
+                for door in doors.values():
+                    if door != "Closed":
+                        return False
+                return True
+        return None
+
+
+class OnStarTrunkStatusSensor(OnStarBinarySensor):
+    """Representation of an OnStar trunk status sensor."""
+
+    _attr_name = "Trunk Closed"
+    _attr_device_class = BinarySensorDeviceClass.DOOR
+
+    def __init__(self, coordinator, vin):
+        """Initialize the binary sensor."""
+        super().__init__(coordinator, vin, "trunk_closed")
+
+    @property
+    def is_on(self):
+        """Return true if trunk is closed."""
+        if (
+            self.coordinator.data
+            and "diagnostics" in self.coordinator.data
+            and self.coordinator.data["diagnostics"]
+            and "commandResponse" in self.coordinator.data["diagnostics"]
+            and "body" in self.coordinator.data["diagnostics"]["commandResponse"]
+        ):
+            body = self.coordinator.data["diagnostics"]["commandResponse"]["body"]
+            if "trunkStatus" in body:
+                return body["trunkStatus"] == "Closed"
+        return None
+
+
+class OnStarHoodStatusSensor(OnStarBinarySensor):
+    """Representation of an OnStar hood status sensor."""
+
+    _attr_name = "Hood Closed"
+    _attr_device_class = BinarySensorDeviceClass.DOOR
+
+    def __init__(self, coordinator, vin):
+        """Initialize the binary sensor."""
+        super().__init__(coordinator, vin, "hood_closed")
+
+    @property
+    def is_on(self):
+        """Return true if hood is closed."""
+        if (
+            self.coordinator.data
+            and "diagnostics" in self.coordinator.data
+            and self.coordinator.data["diagnostics"]
+            and "commandResponse" in self.coordinator.data["diagnostics"]
+            and "body" in self.coordinator.data["diagnostics"]["commandResponse"]
+        ):
+            body = self.coordinator.data["diagnostics"]["commandResponse"]["body"]
+            if "hoodStatus" in body:
+                return body["hoodStatus"] == "Closed"
+        return None
+
+
+class OnStarPluggedInSensor(OnStarBinarySensor):
+    """Representation of an OnStar EV plugged in sensor."""
+
+    _attr_name = "Plugged In"
+    _attr_device_class = BinarySensorDeviceClass.PLUG
+
+    def __init__(self, coordinator, vin):
+        """Initialize the binary sensor."""
+        super().__init__(coordinator, vin, "plugged_in")
+
+    @property
+    def is_on(self):
+        """Return true if vehicle is plugged in."""
+        if (
+            self.coordinator.data
+            and "diagnostics" in self.coordinator.data
+            and self.coordinator.data["diagnostics"]
+            and "commandResponse" in self.coordinator.data["diagnostics"]
+            and "body" in self.coordinator.data["diagnostics"]["commandResponse"]
+        ):
+            body = self.coordinator.data["diagnostics"]["commandResponse"]["body"]
+            if "evStatus" in body and "pluggedIn" in body["evStatus"]:
+                return body["evStatus"]["pluggedIn"]
+            if "pluggedIn" in body:
+                return body["pluggedIn"]
+        return None

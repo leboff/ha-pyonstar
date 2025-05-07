@@ -1,0 +1,66 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured"
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "device_id": "Device ID (unique identifier for this device)",
+                    "onstar_pin": "OnStar PIN (optional)",
+                    "password": "Password",
+                    "totp_secret": "TOTP Secret (optional)",
+                    "username": "Username",
+                    "vin": "Vehicle Identification Number (VIN)"
+                },
+                "description": "Set up your OnStar account to integrate with Home Assistant",
+                "title": "Connect to OnStar"
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "door_locked": {
+                "name": "Door Locked"
+            },
+            "remote_start": {
+                "name": "Remote Start"
+            },
+            "trunk_locked": {
+                "name": "Trunk Locked"
+            }
+        },
+        "lock": {
+            "doors": {
+                "name": "Doors"
+            },
+            "trunk": {
+                "name": "Trunk"
+            }
+        },
+        "sensor": {
+            "battery_level": {
+                "name": "Battery Level"
+            },
+            "fuel_level": {
+                "name": "Fuel Level"
+            },
+            "oil_life": {
+                "name": "Oil Life"
+            },
+            "tire_pressure": {
+                "name": "Tire Pressure"
+            }
+        },
+        "switch": {
+            "remote_start": {
+                "name": "Remote Start"
+            }
+        }
+    }
+}
