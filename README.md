@@ -1,46 +1,82 @@
-# Notice
+# OnStar Integration for Home Assistant
 
-The component and platforms in this repository are not meant to be used by a
-user, but as a "blueprint" that custom component developers can build
-upon, to make more awesome stuff.
+This is a simplified version of the OnStar integration for Home Assistant designed to provide essential functionality with improved stability.
 
-HAVE FUN! 😎
+## Features
 
-## Why?
+The integration currently supports:
 
-This is simple, by having custom_components look (README + structure) the same
-it is easier for developers to help each other and for users to start using them.
+- **Sensors**:
+  - Odometer (kilometers)
+  - EV Battery Level (percentage) - for electric vehicles only
 
-If you are a developer and you want to add things to this "blueprint" that you think more
-developers will have use for, please open a PR to add it :)
+- **Controls**:
+  - Lock/Unlock doors
 
-## What?
+## Installation
 
-This repository contains multiple files, here is a overview:
+1. Copy this custom component to your Home Assistant's `custom_components` folder.
+2. Restart Home Assistant.
+3. Go to Configuration > Integrations > Add Integration and search for "OnStar".
+4. Follow the on-screen instructions to complete the setup.
 
-File | Purpose | Documentation
--- | -- | --
-`.devcontainer.json` | Used for development/testing with Visual Studio Code. | [Documentation](https://code.visualstudio.com/docs/remote/containers)
-`.github/ISSUE_TEMPLATE/*.yml` | Templates for the issue tracker | [Documentation](https://help.github.com/en/github/building-a-strong-community/configuring-issue-templates-for-your-repository)
-`custom_components/integration_blueprint/*` | Integration files, this is where everything happens. | [Documentation](https://developers.home-assistant.io/docs/creating_component_index)
-`CONTRIBUTING.md` | Guidelines on how to contribute. | [Documentation](https://help.github.com/en/github/building-a-strong-community/setting-guidelines-for-repository-contributors)
-`LICENSE` | The license file for the project. | [Documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/licensing-a-repository)
-`README.md` | The file you are reading now, should contain info about the integration, installation and configuration instructions. | [Documentation](https://help.github.com/en/github/writing-on-github/basic-writing-and-formatting-syntax)
-`requirements.txt` | Python packages used for development/lint/testing this integration. | [Documentation](https://pip.pypa.io/en/stable/user_guide/#requirements-files)
+## Configuration
 
-## How?
+During the setup, you will need to provide:
+- OnStar username
+- OnStar password
+- Device ID (used to identify your device with OnStar)
+- Vehicle VIN (Vehicle Identification Number)
+- OnStar PIN (if required)
+- TOTP Secret (if required for two-factor authentication)
 
-1. Create a new repository in GitHub, using this repository as a template by clicking the "Use this template" button in the GitHub UI.
-1. Open your new repository in Visual Studio Code devcontainer (Preferably with the "`Dev Containers: Clone Repository in Named Container Volume...`" option).
-1. Rename all instances of the `integration_blueprint` to `custom_components/<your_integration_domain>` (e.g. `custom_components/awesome_integration`).
-1. Rename all instances of the `Integration Blueprint` to `<Your Integration Name>` (e.g. `Awesome Integration`).
-1. Run the `scripts/develop` to start HA and test out your new integration.
+## Technical Details
 
-## Next steps
+The integration processes data from the OnStar API in the following format:
 
-These are some next steps you may want to look into:
-- Add tests to your integration, [`pytest-homeassistant-custom-component`](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) can help you get started.
-- Add brand images (logo/icon) to https://github.com/home-assistant/brands.
-- Create your first release.
-- Share your integration on the [Home Assistant Forum](https://community.home-assistant.io/).
-- Submit your integration to [HACS](https://hacs.xyz/docs/publish/start).
+```json
+{
+  "commandResponse": {
+    "status": "success",
+    "body": {
+      "diagnosticResponse": [
+        {
+          "name": "EV BATTERY LEVEL",
+          "diagnosticElement": [
+            {
+              "name": "EV BATTERY LEVEL",
+              "value": "75.1",
+              "unit": "%"
+            }
+          ]
+        },
+        {
+          "name": "ODOMETER",
+          "diagnosticElement": [
+            {
+              "name": "ODOMETER",
+              "value": "1911.77",
+              "unit": "KM"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+The integration requests diagnostic data for:
+- ODOMETER
+- EV BATTERY LEVEL (for electric vehicles)
+
+## Notes
+
+This is a simplified version of the OnStar integration, focusing on stability and core functionality. Binary sensors and additional sensors have been removed to improve reliability.
+
+## Future Development
+
+This simplified version serves as a base to iterate upon. Future enhancements may include:
+- Adding back binary sensors once data retrieval is confirmed to be stable
+- Adding additional sensor types as needed
+- Improving command reliability and response handling

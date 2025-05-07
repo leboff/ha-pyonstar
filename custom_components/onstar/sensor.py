@@ -3,24 +3,36 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from aiohttp import ClientError
-
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+    from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.const import PERCENTAGE, UnitOfLength
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class OnStarCoordinator(Protocol):
+    """Protocol for the OnStar coordinator."""
+
+    async def get_diagnostics(self) -> Any:
+        """Get diagnostic data."""
+        ...
 
 
 async def async_setup_entry(
@@ -38,7 +50,8 @@ async def async_setup_entry(
         await coordinator.get_diagnostics()
     except ClientError as err:
         _LOGGER.warning(
-            "API communication error during initial diagnostics: %s. Will try again later",
+            "API communication error during initial diagnostics: %s. "
+            "Will try again later",
             err,
         )
     except HomeAssistantError as err:
@@ -51,7 +64,7 @@ async def async_setup_entry(
             "Invalid response during initial diagnostics: %s. Will try again later", err
         )
 
-    sensors = [
+    sensors: list[OnStarSensor] = [
         OnStarOdometerSensor(coordinator, vin),
     ]
     _LOGGER.debug("Created odometer sensor for vehicle: %s", vin)
@@ -65,10 +78,10 @@ async def async_setup_entry(
         _LOGGER.debug("Created EV battery level sensor for vehicle: %s", vin)
 
     _LOGGER.debug("Adding %s OnStar sensors", len(sensors))
-    async_add_entities(sensors, True)
+    async_add_entities(sensors, update_before_add=True)
 
 
-def _is_electric_vehicle(coordinator) -> bool:
+def _is_electric_vehicle(coordinator: DataUpdateCoordinator) -> bool:
     """Determine if the vehicle is an EV based on the diagnostics data."""
     _LOGGER.debug("Checking if vehicle is electric")
     if (
@@ -102,7 +115,9 @@ class OnStarSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator, vin, sensor_type) -> None:
+    def __init__(
+        self, coordinator: DataUpdateCoordinator, vin: str, sensor_type: str
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._vin = vin
@@ -110,18 +125,18 @@ class OnStarSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"{self._vin}_{sensor_type}"
         _LOGGER.debug("Initialized OnStar sensor: %s", self._attr_unique_id)
 
-    async def _get_diagnostics(self):
+    async def _get_diagnostics(self) -> Any:
         """Get diagnostics data, fetching if needed."""
         try:
-            return await self.coordinator.get_diagnostics()
-        except ClientError as err:
-            _LOGGER.error("API communication error getting diagnostics: %s", err)
+            return await self.coordinator.get_diagnostics()  # type: ignore[attr-defined]
+        except ClientError:
+            _LOGGER.exception("API communication error getting diagnostics")
             return None
-        except HomeAssistantError as err:
-            _LOGGER.error("Home Assistant error getting diagnostics: %s", err)
+        except HomeAssistantError:
+            _LOGGER.exception("Home Assistant error getting diagnostics")
             return None
-        except (ValueError, KeyError) as err:
-            _LOGGER.error("Invalid response error getting diagnostics: %s", err)
+        except (ValueError, KeyError):
+            _LOGGER.exception("Invalid response error getting diagnostics")
             return None
 
 
@@ -133,7 +148,7 @@ class OnStarOdometerSensor(OnStarSensor):
     _attr_device_class = SensorDeviceClass.DISTANCE
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
-    def __init__(self, coordinator, vin) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, vin, "odometer")
 
@@ -143,7 +158,7 @@ class OnStarOdometerSensor(OnStarSensor):
         await super().async_update()
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | None:
         """Return the odometer reading."""
         _LOGGER.debug("Getting odometer value for: %s", self._vin)
         if (
@@ -191,7 +206,7 @@ class OnStarBatteryLevelSensor(OnStarSensor):
     _attr_device_class = SensorDeviceClass.BATTERY
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, coordinator, vin) -> None:
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, vin, "battery_level")
 
@@ -201,7 +216,7 @@ class OnStarBatteryLevelSensor(OnStarSensor):
         await super().async_update()
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | None:
         """Return the battery level."""
         _LOGGER.debug("Getting battery level for: %s", self._vin)
         if (

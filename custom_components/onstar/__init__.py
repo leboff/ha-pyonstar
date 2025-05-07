@@ -2,20 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
-from pathlib import Path
 import time
+from datetime import timedelta
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientError
-from pyonstar import OnStar
 
-from homeassistant.config_entries import ConfigEntry
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import STORAGE_DIR
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from pyonstar import OnStar
 
 from .const import (
     CONF_DEVICE_ID,
@@ -51,8 +53,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         password=entry.data[CONF_PASSWORD],
         device_id=entry.data[CONF_DEVICE_ID],
         vin=entry.data[CONF_VIN],
-        onstar_pin=entry.data.get(CONF_ONSTAR_PIN),
-        totp_secret=entry.data.get(CONF_TOTP_SECRET),
+        onstar_pin=entry.data.get(CONF_ONSTAR_PIN, ""),
+        totp_secret=entry.data.get(CONF_TOTP_SECRET, ""),
         token_location=token_location,
     )
 
@@ -112,7 +114,7 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
         self._diagnostics_data = None
         self._location_data = None
 
-    async def fetch_diagnostics(self):
+    async def fetch_diagnostics(self) -> Any:
         """Fetch diagnostic data from OnStar API."""
         _LOGGER.debug("Requesting diagnostics with items: ODOMETER, EV BATTERY LEVEL")
         try:
@@ -133,24 +135,22 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
             if self.data:
                 self.data["diagnostics"] = diagnostics
         except ClientError as err:
-            _LOGGER.error(
-                "Error in API communication when fetching diagnostics: %s", err
-            )
-            raise UpdateFailed(
-                f"Error in API communication with OnStar: {err}"
-            ) from err
+            _LOGGER.exception("Error in API communication when fetching diagnostics")
+            msg = f"Error in API communication with OnStar: {err}"
+            raise UpdateFailed(msg) from err
         except HomeAssistantError as err:
-            _LOGGER.error("Home Assistant error when fetching diagnostics: %s", err)
-            raise UpdateFailed(f"Home Assistant error with OnStar: {err}") from err
+            _LOGGER.exception("Home Assistant error when fetching diagnostics")
+            msg = f"Home Assistant error with OnStar: {err}"
+            raise UpdateFailed(msg) from err
         except (ValueError, KeyError) as err:
-            _LOGGER.error("Invalid response when fetching diagnostics: %s", err)
-            raise UpdateFailed(f"Invalid response from OnStar API: {err}") from err
+            _LOGGER.exception("Invalid response when fetching diagnostics")
+            msg = f"Invalid response from OnStar API: {err}"
+            raise UpdateFailed(msg) from err
         else:
             return diagnostics
 
-    async def get_diagnostics(self):
+    async def get_diagnostics(self) -> Any:
         """Get diagnostic data, fetching only if needed based on rate limiting."""
-
         current_time = int(time.time())
         time_since_last_update = current_time - self._last_diagnostics_update
 
@@ -159,7 +159,8 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
             or time_since_last_update > DIAGNOSTICS_SCAN_INTERVAL
         ):
             _LOGGER.debug(
-                "Diagnostics data is stale (%s seconds old, limit: %s). Fetching new data",
+                "Diagnostics data is stale (%s seconds old, limit: %s). "
+                "Fetching new data",
                 time_since_last_update,
                 DIAGNOSTICS_SCAN_INTERVAL,
             )
@@ -174,7 +175,7 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
 
         return self._diagnostics_data
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> dict[str, Any]:
         """Fetch location data from OnStar."""
         _LOGGER.debug("Beginning OnStar location data update")
         try:
@@ -193,15 +194,16 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
                 "diagnostics": self._diagnostics_data,  # Use cached diagnostics
             }
         except ClientError as err:
-            _LOGGER.error("Error in API communication with OnStar: %s", err)
-            raise UpdateFailed(
-                f"Error in API communication with OnStar: {err}"
-            ) from err
+            _LOGGER.exception("Error in API communication with OnStar")
+            msg = f"Error in API communication with OnStar: {err}"
+            raise UpdateFailed(msg) from err
         except HomeAssistantError as err:
-            _LOGGER.error("Home Assistant error communicating with OnStar: %s", err)
-            raise UpdateFailed(f"Home Assistant error with OnStar: {err}") from err
+            _LOGGER.exception("Home Assistant error communicating with OnStar")
+            msg = f"Home Assistant error with OnStar: {err}"
+            raise UpdateFailed(msg) from err
         except (ValueError, KeyError) as err:
-            _LOGGER.error("Invalid response from OnStar API: %s", err)
-            raise UpdateFailed(f"Invalid response from OnStar API: {err}") from err
+            _LOGGER.exception("Invalid response from OnStar API")
+            msg = f"Invalid response from OnStar API: {err}"
+            raise UpdateFailed(msg) from err
         else:
             _LOGGER.debug("OnStar location data update completed successfully")
