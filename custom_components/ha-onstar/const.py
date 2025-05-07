@@ -18,11 +18,11 @@ PLATFORMS = [
 ]
 
 # Refresh interval for updating data
-SCAN_INTERVAL = 900  # seconds (15 minutes)
+SCAN_INTERVAL = 300  # seconds (5 minutes)
 
 # Refresh interval for diagnostics data (which is rate limited)
 # 30 minutes between diagnostics calls to avoid rate limiting
-DIAGNOSTICS_SCAN_INTERVAL = 1800  # seconds (30 minutes)
+DIAGNOSTICS_SCAN_INTERVAL = 300  # seconds (5 minutes)
 
 # Default values
 DEFAULT_NAME = "ha-onstar"

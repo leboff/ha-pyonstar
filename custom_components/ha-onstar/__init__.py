@@ -67,11 +67,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("Requesting initial location data from OnStar API")
     await coordinator.async_config_entry_first_refresh()
 
+    # Register the vehicle as a device
+    device_registry = hass.helpers.device_registry.async_get()
+    device_entry = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.data[CONF_VIN])},
+        name=entry.title,
+        manufacturer="OnStar",
+        model="Vehicle",
+        sw_version="1.0",
+    )
+    _LOGGER.debug("Registered OnStar vehicle device: %s", device_entry.id)
+
     # Store coordinator in hass.data
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "coordinator": coordinator,
         "onstar": onstar,
+        "device_id": device_entry.id,
     }
 
     # Set up all platforms

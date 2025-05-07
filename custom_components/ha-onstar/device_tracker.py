@@ -10,6 +10,7 @@ from homeassistant.components.device_tracker.const import SourceType
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.device_registry import DeviceInfo
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
     from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -39,6 +40,16 @@ class OnStarDeviceTracker(CoordinatorEntity, TrackerEntity):
         super().__init__(coordinator)
         self._vin = vin
         self._attr_unique_id = f"{self._vin}_location"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about this entity."""
+        return {
+            "identifiers": {(DOMAIN, self._vin)},
+            "name": f"OnStar Vehicle ({self._vin})",
+            "manufacturer": "OnStar",
+            "model": "Vehicle",
+        }
 
     @property
     def source_type(self) -> SourceType:

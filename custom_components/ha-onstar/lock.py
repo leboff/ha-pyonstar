@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientError
 from homeassistant.components.lock import LockEntity
+from homeassistant.helpers.device_registry import DeviceInfo
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -57,6 +58,16 @@ class OnStarDoorLock(CoordinatorEntity, LockEntity):
         self._attr_unique_id = f"{self._vin}_door_lock"
         self._attr_is_locked = None
         _LOGGER.debug("Initialized OnStar door lock: %s", self._attr_unique_id)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about this entity."""
+        return {
+            "identifiers": {(DOMAIN, self._vin)},
+            "name": f"OnStar Vehicle ({self._vin})",
+            "manufacturer": "OnStar",
+            "model": "Vehicle",
+        }
 
     async def async_lock(self, **kwargs: Any) -> bool:  # noqa: ARG002
         """Lock the vehicle doors."""

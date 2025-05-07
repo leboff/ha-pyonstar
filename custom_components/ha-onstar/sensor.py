@@ -15,6 +15,7 @@ from homeassistant.components.sensor import (
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.device_registry import DeviceInfo
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
     from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.const import PERCENTAGE, UnitOfLength
@@ -124,6 +125,16 @@ class OnStarSensor(CoordinatorEntity, SensorEntity):
         self._sensor_type = sensor_type
         self._attr_unique_id = f"{self._vin}_{sensor_type}"
         _LOGGER.debug("Initialized OnStar sensor: %s", self._attr_unique_id)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about this entity."""
+        return {
+            "identifiers": {(DOMAIN, self._vin)},
+            "name": f"OnStar Vehicle ({self._vin})",
+            "manufacturer": "OnStar",
+            "model": "Vehicle",
+        }
 
     async def _get_diagnostics(self) -> Any:
         """Get diagnostics data, fetching if needed."""

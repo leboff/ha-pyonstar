@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientError
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.helpers.device_registry import DeviceInfo
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -51,6 +52,16 @@ class OnStarRemoteStartSwitch(CoordinatorEntity, SwitchEntity):
         self._vin = vin
         self._attr_unique_id = f"{self._vin}_remote_start"
         self._attr_is_on = False
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about this entity."""
+        return {
+            "identifiers": {(DOMAIN, self._vin)},
+            "name": f"OnStar Vehicle ({self._vin})",
+            "manufacturer": "OnStar",
+            "model": "Vehicle",
+        }
 
     async def async_turn_on(self, **kwargs: Any) -> bool:  # noqa: ARG002
         """Turn on remote start."""
