@@ -1,4 +1,4 @@
-"""The OnStar integration."""
+"""The ha-onstar integration."""  # noqa: N999
 
 from __future__ import annotations
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -25,9 +26,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Required(CONF_DEVICE_ID): str,
         vol.Required(CONF_VIN): str,
-        vol.Optional(CONF_TOTP_SECRET): str,
+        vol.Required(
+            CONF_TOTP_SECRET,
+            description="TOTP secret obtained when setting up MFA via OnStar",
+        ): str,
     }
 )
 
@@ -38,15 +41,19 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
+    # Generate a UUID4 for device_id
+    device_id = str(uuid.uuid4())
+    data[CONF_DEVICE_ID] = device_id
+
     token_location = str(Path(hass.config.path(STORAGE_DIR)) / DOMAIN)
 
     try:
         onstar = OnStar(
             username=data[CONF_USERNAME],
             password=data[CONF_PASSWORD],
-            device_id=data[CONF_DEVICE_ID],
+            device_id=device_id,
             vin=data[CONF_VIN],
-            totp_secret=data.get(CONF_TOTP_SECRET) or "",
+            totp_secret=data[CONF_TOTP_SECRET],
             token_location=token_location,
             onstar_pin="",
         )

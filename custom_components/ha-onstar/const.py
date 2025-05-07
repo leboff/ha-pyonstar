@@ -2,7 +2,7 @@
 
 from homeassistant.const import Platform
 
-DOMAIN = "onstar"
+DOMAIN = "ha-onstar"
 
 # Configuration constants
 CONF_DEVICE_ID = "device_id"
@@ -25,4 +25,4 @@ SCAN_INTERVAL = 900  # seconds (15 minutes)
 DIAGNOSTICS_SCAN_INTERVAL = 1800  # seconds (30 minutes)
 
 # Default values
-DEFAULT_NAME = "OnStar"
+DEFAULT_NAME = "ha-onstar"

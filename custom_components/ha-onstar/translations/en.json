@@ -13,7 +13,7 @@
                 "data": {
                     "device_id": "Device ID (unique identifier for this device)",
                     "password": "Password",
-                    "totp_secret": "TOTP Secret (optional)",
+                    "totp_secret": "TOTP Secret",
                     "username": "Username",
                     "vin": "Vehicle Identification Number (VIN)"
                 },
