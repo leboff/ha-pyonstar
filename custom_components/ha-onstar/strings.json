@@ -7,9 +7,14 @@
         "data": {
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]",
-          "device_id": "Device ID (unique identifier for this device)",
-          "vin": "Vehicle Identification Number (VIN)",
-          "totp_secret": "TOTP Secret (optional)"
+          "totp_secret": "TOTP secret obtained when setting up MFA via OnStar"
+        }
+      },
+      "select_vehicle": {
+        "title": "Select your OnStar vehicle",
+        "description": "Found {vehicle_count} vehicles in your OnStar account. Select the vehicle you want to add.",
+        "data": {
+          "vin": "Select Vehicle"
         }
       }
     },
