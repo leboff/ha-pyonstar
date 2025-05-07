@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .helpers import get_location_data, get_location_value
 
 
 async def async_setup_entry(
@@ -59,29 +60,29 @@ class OnStarDeviceTracker(CoordinatorEntity, TrackerEntity):
     @property
     def latitude(self) -> float | None:
         """Return latitude value of the device."""
-        if (
-            self.coordinator.data
-            and "location" in self.coordinator.data
-            and self.coordinator.data["location"]
-            and "commandResponse" in self.coordinator.data["location"]
-            and "body" in self.coordinator.data["location"]["commandResponse"]
-        ):
-            body = self.coordinator.data["location"]["commandResponse"]["body"]
-            if "location" in body and "latitude" in body["location"]:
-                return float(body["location"]["latitude"])
+        location = get_location_data(self.coordinator.data)
+        if location is None:
+            return None
+
+        lat = get_location_value(location, "lat")
+        if lat is not None:
+            try:
+                return float(lat)
+            except (ValueError, TypeError):
+                return None
         return None
 
     @property
     def longitude(self) -> float | None:
         """Return longitude value of the device."""
-        if (
-            self.coordinator.data
-            and "location" in self.coordinator.data
-            and self.coordinator.data["location"]
-            and "commandResponse" in self.coordinator.data["location"]
-            and "body" in self.coordinator.data["location"]["commandResponse"]
-        ):
-            body = self.coordinator.data["location"]["commandResponse"]["body"]
-            if "location" in body and "longitude" in body["location"]:
-                return float(body["location"]["longitude"])
+        location = get_location_data(self.coordinator.data)
+        if location is None:
+            return None
+
+        long = get_location_value(location, "long")
+        if long is not None:
+            try:
+                return float(long)
+            except (ValueError, TypeError):
+                return None
         return None

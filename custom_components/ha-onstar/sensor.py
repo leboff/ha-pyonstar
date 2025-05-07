@@ -23,6 +23,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
+from .helpers import get_diagnostic_response, get_diagnostic_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,28 +86,18 @@ async def async_setup_entry(
 def _is_electric_vehicle(coordinator: DataUpdateCoordinator) -> bool:
     """Determine if the vehicle is an EV based on the diagnostics data."""
     _LOGGER.debug("Checking if vehicle is electric")
-    if (
-        coordinator.data is None
-        or "diagnostics" not in coordinator.data
-        or coordinator.data["diagnostics"] is None
-    ):
+
+    diagnostics = get_diagnostic_response(coordinator.data)
+    if diagnostics is None:
         _LOGGER.debug("No diagnostics data available yet to determine EV status")
         return False
 
-    if (
-        "commandResponse" in coordinator.data["diagnostics"]
-        and "body" in coordinator.data["diagnostics"]["commandResponse"]
-        and "diagnosticResponse"
-        in coordinator.data["diagnostics"]["commandResponse"]["body"]
-    ):
-        diagnostics = coordinator.data["diagnostics"]["commandResponse"]["body"][
-            "diagnosticResponse"
-        ]
-        _LOGGER.debug("Diagnostic response: %s", diagnostics)
-        for diagnostic in diagnostics:
-            if diagnostic.get("name") == "EV BATTERY LEVEL":
-                _LOGGER.debug("Found EV BATTERY LEVEL, vehicle is electric")
-                return True
+    _LOGGER.debug("Diagnostic response: %s", diagnostics)
+    for diagnostic in diagnostics:
+        if diagnostic.get("name") == "EV BATTERY LEVEL":
+            _LOGGER.debug("Found EV BATTERY LEVEL, vehicle is electric")
+            return True
+
     _LOGGER.debug("No EV data found, vehicle is not electric")
     return False
 
@@ -172,41 +163,31 @@ class OnStarOdometerSensor(OnStarSensor):
     def native_value(self) -> float | None:
         """Return the odometer reading."""
         _LOGGER.debug("Getting odometer value for: %s", self._vin)
-        if (
-            self.coordinator.data is None
-            or "diagnostics" not in self.coordinator.data
-            or self.coordinator.data["diagnostics"] is None
-        ):
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
             _LOGGER.debug("No diagnostics data available for odometer")
             return None
 
-        if (
-            "commandResponse" in self.coordinator.data["diagnostics"]
-            and "body" in self.coordinator.data["diagnostics"]["commandResponse"]
-            and "diagnosticResponse"
-            in self.coordinator.data["diagnostics"]["commandResponse"]["body"]
-        ):
-            diagnostics = self.coordinator.data["diagnostics"]["commandResponse"][
-                "body"
-            ]["diagnosticResponse"]
-            _LOGGER.debug("Processing diagnostics for odometer: %s", diagnostics)
-            for diagnostic in diagnostics:
-                if diagnostic.get("name") == "ODOMETER" and diagnostic.get(
-                    "diagnosticElement"
-                ):
-                    elements = diagnostic.get("diagnosticElement")
-                    if elements and "value" in elements[0]:
-                        value = float(elements[0]["value"])
-                        _LOGGER.debug(
-                            "Found odometer value: %s %s",
-                            value,
-                            self._attr_native_unit_of_measurement,
-                        )
-                        return value
+        _LOGGER.debug("Processing diagnostics for odometer: %s", diagnostics)
+        value = get_diagnostic_value(diagnostics, "ODOMETER")
+
+        if value is None:
             _LOGGER.debug("No odometer data found in diagnostics")
+            return None
+
+        try:
+            float_value = float(value)
+            _LOGGER.debug(
+                "Found odometer value: %s %s",
+                float_value,
+                self._attr_native_unit_of_measurement,
+            )
+        except (ValueError, TypeError):
+            _LOGGER.debug("Could not convert odometer value to float: %s", value)
+            return None
         else:
-            _LOGGER.debug("Diagnostic data structure is incorrect for odometer")
-        return None
+            return float_value
 
 
 class OnStarBatteryLevelSensor(OnStarSensor):
@@ -230,34 +211,24 @@ class OnStarBatteryLevelSensor(OnStarSensor):
     def native_value(self) -> float | None:
         """Return the battery level."""
         _LOGGER.debug("Getting battery level for: %s", self._vin)
-        if (
-            self.coordinator.data is None
-            or "diagnostics" not in self.coordinator.data
-            or self.coordinator.data["diagnostics"] is None
-        ):
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
             _LOGGER.debug("No diagnostics data available for battery level")
             return None
 
-        if (
-            "commandResponse" in self.coordinator.data["diagnostics"]
-            and "body" in self.coordinator.data["diagnostics"]["commandResponse"]
-            and "diagnosticResponse"
-            in self.coordinator.data["diagnostics"]["commandResponse"]["body"]
-        ):
-            diagnostics = self.coordinator.data["diagnostics"]["commandResponse"][
-                "body"
-            ]["diagnosticResponse"]
-            _LOGGER.debug("Processing diagnostics for battery level: %s", diagnostics)
-            for diagnostic in diagnostics:
-                if diagnostic.get("name") == "EV BATTERY LEVEL" and diagnostic.get(
-                    "diagnosticElement"
-                ):
-                    elements = diagnostic.get("diagnosticElement")
-                    if elements and "value" in elements[0]:
-                        value = float(elements[0]["value"])
-                        _LOGGER.debug("Found battery level: %s%s", value, "%")
-                        return value
+        _LOGGER.debug("Processing diagnostics for battery level: %s", diagnostics)
+        value = get_diagnostic_value(diagnostics, "EV BATTERY LEVEL")
+
+        if value is None:
             _LOGGER.debug("No battery level data found in diagnostics")
+            return None
+
+        try:
+            float_value = float(value)
+            _LOGGER.debug("Found battery level: %s%s", float_value, "%")
+        except (ValueError, TypeError):
+            _LOGGER.debug("Could not convert battery level to float: %s", value)
+            return None
         else:
-            _LOGGER.debug("Diagnostic data structure is incorrect for battery level")
-        return None
+            return float_value

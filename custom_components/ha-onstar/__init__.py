@@ -189,21 +189,25 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch location data from OnStar."""
-        _LOGGER.debug("Beginning OnStar location data update")
+        _LOGGER.debug("Beginning OnStar data update")
         try:
             # Get vehicle account data first if needed
             await self.onstar.get_account_vehicles()
-            # Only get vehicle location on regular updates
+
+            # Get vehicle location
             _LOGGER.debug("Requesting vehicle location")
             location = await self.onstar.location()
             _LOGGER.debug("Received location response: %s", location)
-
             self._location_data = location
 
-            # Return combined data, but don't fetch diagnostics here
+            # Also update diagnostics data on each cycle
+            # Use get_diagnostics() to respect rate limiting
+            await self.get_diagnostics()
+
+            # Return combined data
             return {
                 "location": location,
-                "diagnostics": self._diagnostics_data,  # Use cached diagnostics
+                "diagnostics": self._diagnostics_data,
             }
         except ClientError as err:
             _LOGGER.exception("Error in API communication with OnStar")
@@ -218,4 +222,4 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
             msg = f"Invalid response from OnStar API: {err}"
             raise UpdateFailed(msg) from err
         else:
-            _LOGGER.debug("OnStar location data update completed successfully")
+            _LOGGER.debug("OnStar data update completed successfully")
