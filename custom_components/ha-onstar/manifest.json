@@ -1,5 +1,5 @@
 {
-  "domain": "onstar",
+  "domain": "ha-onstar",
   "version": "0.0.1",
   "name": "OnStar",
   "codeowners": ["@leboff"],

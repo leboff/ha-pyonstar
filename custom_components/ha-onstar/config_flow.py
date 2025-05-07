@@ -17,7 +17,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import STORAGE_DIR
 from pyonstar import OnStar
 
-from .const import CONF_DEVICE_ID, CONF_ONSTAR_PIN, CONF_TOTP_SECRET, CONF_VIN, DOMAIN
+from .const import CONF_DEVICE_ID, CONF_TOTP_SECRET, CONF_VIN, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,7 +27,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_PASSWORD): str,
         vol.Required(CONF_DEVICE_ID): str,
         vol.Required(CONF_VIN): str,
-        vol.Optional(CONF_ONSTAR_PIN): str,
         vol.Optional(CONF_TOTP_SECRET): str,
     }
 )
@@ -47,9 +46,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             password=data[CONF_PASSWORD],
             device_id=data[CONF_DEVICE_ID],
             vin=data[CONF_VIN],
-            onstar_pin=data.get(CONF_ONSTAR_PIN) or "",
             totp_secret=data.get(CONF_TOTP_SECRET) or "",
             token_location=token_location,
+            onstar_pin="",
         )
         # Test connection by getting account vehicles
         await onstar.get_account_vehicles()

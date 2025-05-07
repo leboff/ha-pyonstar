@@ -7,7 +7,6 @@ DOMAIN = "onstar"
 # Configuration constants
 CONF_DEVICE_ID = "device_id"
 CONF_VIN = "vin"
-CONF_ONSTAR_PIN = "onstar_pin"
 CONF_TOTP_SECRET = "totp_secret"  # noqa: S105
 
 # Platforms

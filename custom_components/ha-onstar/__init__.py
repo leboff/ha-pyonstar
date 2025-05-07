@@ -21,7 +21,6 @@ from pyonstar import OnStar
 
 from .const import (
     CONF_DEVICE_ID,
-    CONF_ONSTAR_PIN,
     CONF_TOTP_SECRET,
     CONF_VIN,
     DIAGNOSTICS_SCAN_INTERVAL,
@@ -53,9 +52,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         password=entry.data[CONF_PASSWORD],
         device_id=entry.data[CONF_DEVICE_ID],
         vin=entry.data[CONF_VIN],
-        onstar_pin=entry.data.get(CONF_ONSTAR_PIN, ""),
         totp_secret=entry.data.get(CONF_TOTP_SECRET, ""),
         token_location=token_location,
+        onstar_pin="",
     )
 
     # Create update coordinator

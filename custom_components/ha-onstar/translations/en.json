@@ -12,7 +12,6 @@
             "user": {
                 "data": {
                     "device_id": "Device ID (unique identifier for this device)",
-                    "onstar_pin": "OnStar PIN (optional)",
                     "password": "Password",
                     "totp_secret": "TOTP Secret (optional)",
                     "username": "Username",

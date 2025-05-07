@@ -9,7 +9,6 @@
           "password": "[%key:common::config_flow::data::password%]",
           "device_id": "Device ID (unique identifier for this device)",
           "vin": "Vehicle Identification Number (VIN)",
-          "onstar_pin": "OnStar PIN (optional)",
           "totp_secret": "TOTP Secret (optional)"
         }
       }
