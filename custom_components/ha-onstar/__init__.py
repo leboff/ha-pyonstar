@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.httpx_client import get_async_client
 from homeassistant.helpers.storage import STORAGE_DIR
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from pyonstar import OnStar
@@ -48,6 +50,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data[CONF_VIN],
     )
 
+    # Get an httpx client that handles SSL cert loading in an executor
+    httpx_client = get_async_client(hass)
+
     onstar = OnStar(
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
@@ -56,6 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         totp_secret=entry.data.get(CONF_TOTP_SECRET, ""),
         token_location=token_location,
         onstar_pin="",
+        http_client=httpx_client,
     )
 
     # Create update coordinator
@@ -69,7 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     # Register the vehicle as a device
-    device_registry = hass.helpers.device_registry.async_get()
+    device_registry = dr.async_get(hass)
     device_entry = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, entry.data[CONF_VIN])},
@@ -102,6 +108,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
+        # Get the OnStar client instance
+        onstar = hass.data[DOMAIN][entry.entry_id]["onstar"]
+
+        # Close the OnStar client to release resources
+        try:
+            await onstar.close()
+            _LOGGER.debug("OnStar client closed successfully")
+        except Exception:
+            _LOGGER.exception("Error closing OnStar client")
+
+        # Remove entry data
         hass.data[DOMAIN].pop(entry.entry_id)
         _LOGGER.debug("OnStar integration unloaded successfully")
     else:

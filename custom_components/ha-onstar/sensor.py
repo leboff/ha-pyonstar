@@ -527,7 +527,6 @@ class OnStarLifetimeEfficiencySensor(OnStarSensor):
 
     _attr_name = "Lifetime Efficiency"
     _attr_native_unit_of_measurement = "kWh/100km"
-    _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
