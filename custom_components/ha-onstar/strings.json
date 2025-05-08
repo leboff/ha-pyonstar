@@ -51,6 +51,45 @@
       },
       "tire_pressure": {
         "name": "Tire Pressure"
+      },
+      "odometer": {
+        "name": "Odometer"
+      },
+      "charge_state": {
+        "name": "Charge State"
+      },
+      "plug_state": {
+        "name": "Plug State"
+      },
+      "plug_voltage": {
+        "name": "Plug Voltage"
+      },
+      "charger_power_level": {
+        "name": "Charger Power Level"
+      },
+      "charge_complete_time": {
+        "name": "Charge Complete Time"
+      },
+      "last_trip_efficiency": {
+        "name": "Last Trip Efficiency"
+      },
+      "lifetime_efficiency": {
+        "name": "Lifetime Efficiency"
+      },
+      "ev_range": {
+        "name": "EV Range"
+      },
+      "tire_pressure_lf": {
+        "name": "Tire Pressure Left Front"
+      },
+      "tire_pressure_rf": {
+        "name": "Tire Pressure Right Front"
+      },
+      "tire_pressure_lr": {
+        "name": "Tire Pressure Left Rear"
+      },
+      "tire_pressure_rr": {
+        "name": "Tire Pressure Right Rear"
       }
     },
     "switch": {

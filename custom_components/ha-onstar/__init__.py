@@ -25,6 +25,7 @@ from .const import (
     CONF_VIN,
     DIAGNOSTICS_SCAN_INTERVAL,
     DOMAIN,
+    LOCATION_SCAN_INTERVAL,
     PLATFORMS,
     SCAN_INTERVAL,
 )
@@ -123,22 +124,31 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
         self.onstar = onstar
         self.vehicle_data = {}
         self._last_diagnostics_update = 0
+        self._last_location_update = 0
         self._diagnostics_data = None
         self._location_data = None
 
     async def fetch_diagnostics(self) -> Any:
         """Fetch diagnostic data from OnStar API."""
-        _LOGGER.debug("Requesting diagnostics with items: ODOMETER, EV BATTERY LEVEL")
+        diagnostics_items = [
+            "LAST TRIP FUEL ECONOMY",
+            "EV BATTERY LEVEL",
+            "EV CHARGE STATE",
+            "ENERGY EFFICIENCY",
+            "HV BATTERY CHARGE COMPLETE TIME",
+            "ODOMETER",
+            "EV PLUG VOLTAGE",
+            "CHARGER POWER LEVEL",
+            "EV PLUG STATE",
+            "TIRE PRESSURE",
+            "GET CHARGE MODE",
+            "VEHICLE RANGE",
+        ]
+        _LOGGER.debug("Requesting diagnostics with items: %s", diagnostics_items)
         try:
             # Get vehicle diagnostic data
             diagnostics = await self.onstar.diagnostics(
-                options={
-                    "diagnostic_item": [
-                        "ODOMETER",
-                        "EV BATTERY LEVEL",
-                        "TIRE PRESSURE",
-                    ]
-                }
+                options={"diagnostic_item": diagnostics_items}
             )
             _LOGGER.debug("Received diagnostics response: %s", diagnostics)
 
@@ -187,18 +197,64 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
 
         return self._diagnostics_data
 
+    async def fetch_location(self) -> Any:
+        """Fetch location data from OnStar API."""
+        _LOGGER.debug("Requesting vehicle location")
+        try:
+            # Get vehicle location
+            location = await self.onstar.location()
+            _LOGGER.debug("Received location response: %s", location)
+
+            self._location_data = location
+            # Keep location data in self.data for backward compatibility
+            if self.data:
+                self.data["location"] = location
+        except ClientError as err:
+            _LOGGER.exception("Error in API communication when fetching location")
+            msg = f"Error in API communication with OnStar: {err}"
+            raise UpdateFailed(msg) from err
+        except HomeAssistantError as err:
+            _LOGGER.exception("Home Assistant error when fetching location")
+            msg = f"Home Assistant error with OnStar: {err}"
+            raise UpdateFailed(msg) from err
+        except (ValueError, KeyError) as err:
+            _LOGGER.exception("Invalid response when fetching location")
+            msg = f"Invalid response from OnStar API: {err}"
+            raise UpdateFailed(msg) from err
+        else:
+            return location
+
+    async def get_location(self) -> Any:
+        """Get location data, fetching only if needed based on rate limiting."""
+        current_time = int(time.time())
+        time_since_last_update = current_time - self._last_location_update
+
+        if not self._location_data or time_since_last_update > LOCATION_SCAN_INTERVAL:
+            _LOGGER.debug(
+                "Location data is stale (%s seconds old, limit: %s). Fetching new data",
+                time_since_last_update,
+                LOCATION_SCAN_INTERVAL,
+            )
+            await self.fetch_location()
+            self._last_location_update = current_time
+        else:
+            _LOGGER.debug(
+                "Using cached location data (%s seconds old, limit: %s)",
+                time_since_last_update,
+                LOCATION_SCAN_INTERVAL,
+            )
+
+        return self._location_data
+
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch location data from OnStar."""
+        """Fetch data from OnStar."""
         _LOGGER.debug("Beginning OnStar data update")
         try:
             # Get vehicle account data first if needed
             await self.onstar.get_account_vehicles()
 
-            # Get vehicle location
-            _LOGGER.debug("Requesting vehicle location")
-            location = await self.onstar.location()
-            _LOGGER.debug("Received location response: %s", location)
-            self._location_data = location
+            # Get vehicle location using cache-aware method
+            await self.get_location()
 
             # Also update diagnostics data on each cycle
             # Use get_diagnostics() to respect rate limiting
@@ -206,7 +262,7 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
 
             # Return combined data
             return {
-                "location": location,
+                "location": self._location_data,
                 "diagnostics": self._diagnostics_data,
             }
         except ClientError as err:
