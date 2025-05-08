@@ -114,7 +114,7 @@ async def async_setup_entry(
     _LOGGER.debug("Created tire pressure sensors for vehicle: %s", vin)
 
     _LOGGER.debug("Adding %s OnStar sensors", len(sensors))
-    async_add_entities(sensors, update_before_add=True)
+    async_add_entities(sensors, update_before_add=False)
 
 
 def _is_electric_vehicle(coordinator: DataUpdateCoordinator) -> bool:

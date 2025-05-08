@@ -27,7 +27,7 @@ async def async_setup_entry(
     coordinator = data["coordinator"]
     vin = entry.data["vin"]
 
-    async_add_entities([OnStarDeviceTracker(coordinator, vin)], update_before_add=True)
+    async_add_entities([OnStarDeviceTracker(coordinator, vin)], update_before_add=False)
 
 
 class OnStarDeviceTracker(CoordinatorEntity, TrackerEntity):

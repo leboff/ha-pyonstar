@@ -33,7 +33,7 @@ async def async_setup_entry(
     vin = entry.data["vin"]
 
     async_add_entities(
-        [OnStarRemoteStartSwitch(coordinator, onstar, vin)], update_before_add=True
+        [OnStarRemoteStartSwitch(coordinator, onstar, vin)], update_before_add=False
     )
 
 

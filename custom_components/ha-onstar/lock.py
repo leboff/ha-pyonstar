@@ -38,7 +38,7 @@ async def async_setup_entry(
         [
             OnStarDoorLock(coordinator, onstar, vin),
         ],
-        update_before_add=True,
+        update_before_add=False,
     )
 
 
