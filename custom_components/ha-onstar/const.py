@@ -18,7 +18,7 @@ PLATFORMS = [
 ]
 
 # Refresh interval for updating data
-SCAN_INTERVAL = 120  # seconds (2 minutes)
+SCAN_INTERVAL = 1800  # seconds (30 minutes)
 
 # Refresh interval for diagnostics data (which is rate limited)
 # 30 minutes between diagnostics calls to avoid rate limiting
