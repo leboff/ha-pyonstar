@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any
 
 from aiohttp import ClientError
 from homeassistant.components.lock import LockEntity
-from homeassistant.helpers.device_registry import DeviceInfo
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.device_registry import DeviceInfo
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
     from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
     from pyonstar import OnStar

@@ -30,6 +30,7 @@ from .const import (
     PLATFORMS,
     SCAN_INTERVAL,
     STANDARD_MODE_BACKOFF_TIME,
+    VERSION,
 )
 
 if TYPE_CHECKING:
@@ -48,6 +49,7 @@ PERIODIC_RESET_SECONDS = 3600  # 1 hour
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up OnStar from a config entry."""
     _LOGGER.debug("Setting up OnStar integration")
+    _LOGGER.info("Starting OnStar integration version %s", VERSION)
 
     # Create OnStar API instance
     token_location = str(Path(hass.config.path(STORAGE_DIR)) / DOMAIN)

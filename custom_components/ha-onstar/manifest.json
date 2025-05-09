@@ -1,15 +1,19 @@
 {
   "domain": "ha-onstar",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "name": "OnStar",
-  "codeowners": ["@leboff"],
+  "codeowners": [
+    "@leboff"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://www.home-assistant.io/integrations/onstar",
   "homekit": {},
   "iot_class": "cloud_polling",
   "quality_scale": "bronze",
-  "requirements": ["pyonstar==0.0.12"],
+  "requirements": [
+    "pyonstar==0.0.12"
+  ],
   "ssdp": [],
   "zeroconf": []
 }

@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Get changelog entry
+        id: get_changelog
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          CHANGELOG_ENTRY=$(awk "/^## ${VERSION}/,/^## /" CHANGELOG.md | sed '/^## /d' | sed -e :a -e '/./,$!d;/^\n*$/{$d;N;};/\n$/ba' || true)
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG_ENTRY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: v${{ steps.get_version.outputs.VERSION }}
+          body: |
+            # OnStar Integration v${{ steps.get_version.outputs.VERSION }}
+
+            ${{ steps.get_changelog.outputs.CHANGELOG }}
+
+            ## Installation Instructions
+
+            ### HACS Installation (Recommended)
+
+            1. Add this repository as a custom repository in HACS:
+               - Go to HACS in Home Assistant
+               - Click on "Integrations"
+               - Click the three dots in the top right and select "Custom repositories"
+               - Enter the repository URL and select "Integration" as the category
+               - Click "Add"
+
+            2. Install the "OnStar" integration from HACS
+
+            ### Manual Installation
+
+            1. Download the `ha-onstar.zip` file from this release
+            2. Unzip the file
+            3. Copy the `ha-onstar` folder to your Home Assistant's `custom_components` directory
+            4. Restart Home Assistant
+            5. Add the integration through the Home Assistant UI: Configuration -> Integrations -> Add Integration -> OnStar
+          draft: false
+          prerelease: false
+
+  release_zip:
+    name: Prepare release asset
+    needs: create_release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Create zip
+        run: |
+          cd custom_components/ha-onstar
+          zip -r ../../ha-onstar.zip .
+
+      - name: Upload zip to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./ha-onstar.zip
+          asset_name: ha-onstar.zip
+          asset_content_type: application/zip

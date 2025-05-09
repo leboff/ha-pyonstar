@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional, TypeVar, cast
-from datetime import datetime, timedelta
 import zoneinfo  # For timezone support
+from datetime import datetime, timedelta
+from typing import Any, TypeVar
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ _DAYS_MAP = {
 
 
 def get_nested_value(
-    data: dict[str, Any], path: list[str], default: Optional[T] = None
+    data: dict[str, Any], path: list[str], default: T | None = None
 ) -> Any | T:
     """
     Safely access a nested value in a dictionary using a path of keys.
@@ -36,6 +36,7 @@ def get_nested_value(
 
     Returns:
         The value at the specified path or the default if not found
+
     """
     if data is None:
         return default
@@ -58,6 +59,7 @@ def get_diagnostic_response(data: dict[str, Any]) -> list[dict[str, Any]] | None
 
     Returns:
         The diagnostic response data or None if not available
+
     """
     if data is None or "diagnostics" not in data or data["diagnostics"] is None:
         _LOGGER.debug("No diagnostics data available")
@@ -77,8 +79,8 @@ def get_diagnostic_response(data: dict[str, Any]) -> list[dict[str, Any]] | None
 def get_diagnostic_value(
     diagnostics: list[dict[str, Any]],
     name: str,
-    element_name: Optional[str] = None,
-    default: Optional[T] = None,
+    element_name: str | None = None,
+    default: T | None = None,
 ) -> Any | T:
     """
     Get a specific diagnostic value by name from a diagnostic response.
@@ -86,11 +88,13 @@ def get_diagnostic_value(
     Args:
         diagnostics: The diagnostic response list
         name: The name of the diagnostic category to find
-        element_name: The name of the specific element to find (defaults to name if None)
+        element_name: The name of the specific
+            element to find (defaults to name if None)
         default: The value to return if the diagnostic isn't found
 
     Returns:
         The value of the diagnostic or the default if not found
+
     """
     if diagnostics is None:
         return default
@@ -120,6 +124,7 @@ def get_location_data(data: dict[str, Any]) -> dict[str, Any] | None:
 
     Returns:
         The location data or None if not available
+
     """
     if data is None or "location" not in data or data["location"] is None:
         _LOGGER.debug("No location data available")
@@ -137,7 +142,7 @@ def get_location_data(data: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def get_location_value(
-    location: dict[str, Any], field: str, default: Optional[T] = None
+    location: dict[str, Any], field: str, default: T | None = None
 ) -> Any | T:
     """
     Get a specific location value by field name.
@@ -149,6 +154,7 @@ def get_location_value(
 
     Returns:
         The value of the field or the default if not found
+
     """
     if location is None or field not in location:
         return default
@@ -169,6 +175,7 @@ def calculate_next_occurrence_timestamp(
 
     Returns:
         A datetime object with timezone information or None if the input is invalid
+
     """
     try:
         # Get current date in UTC
@@ -203,7 +210,8 @@ def calculate_next_occurrence_timestamp(
         target_datetime = target_date.replace(hour=int(hour), minute=int(minute))
 
         _LOGGER.debug("Calculated next occurrence: %s", target_datetime)
-        return target_datetime
     except (ValueError, TypeError) as err:
         _LOGGER.debug("Error calculating timestamp: %s", err)
         return None
+    else:
+        return target_datetime
