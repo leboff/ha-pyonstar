@@ -7,7 +7,7 @@
   ],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://www.home-assistant.io/integrations/onstar",
+  "documentation": "https://github.com/leboff/ha-pyonstar",
   "homekit": {},
   "iot_class": "cloud_polling",
   "quality_scale": "bronze",
