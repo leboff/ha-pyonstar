@@ -8,8 +8,6 @@
 [![Project Maintenance][maintenance-shield]][user_profile]
 [![BuyMeCoffee][buymecoffeebadge]][buymecoffee]
 
-![OnStar Logo](/onstar_logo.png)
-
 This integration provides connectivity to the OnStar API for General Motors vehicles in Home Assistant.
 
 ## Features
