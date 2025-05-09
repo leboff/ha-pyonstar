@@ -1,6 +1,5 @@
 {
   "domain": "ha-onstar",
-  "version": "0.2.0",
   "name": "OnStar",
   "codeowners": [
     "@leboff"
@@ -15,5 +14,6 @@
     "pyonstar==0.0.12"
   ],
   "ssdp": [],
+  "version": "0.2.0",
   "zeroconf": []
 }
