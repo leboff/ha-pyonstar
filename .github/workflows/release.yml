@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
 
+# Add explicit permissions at the top level of the workflow
+permissions:
+  contents: write
+  discussions: write
+
 jobs:
   create_release:
     name: Create Release
