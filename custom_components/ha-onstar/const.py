@@ -9,6 +9,7 @@ CONF_DEVICE_ID = "device_id"
 CONF_VIN = "vin"
 CONF_TOTP_SECRET = "totp_secret"  # noqa: S105
 CONF_CHEATER_MODE = "cheater_mode"
+CONF_PIN = "onstar_pin"
 
 # Platforms
 PLATFORMS = [

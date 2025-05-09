@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow as HAConfigFlow, OptionsFlow
+from homeassistant.config_entries import ConfigFlow as HAConfigFlow
+from homeassistant.config_entries import OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 if TYPE_CHECKING:
@@ -18,9 +19,19 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import STORAGE_DIR
 from pyonstar import OnStar
 
-from .const import CONF_DEVICE_ID, CONF_TOTP_SECRET, CONF_VIN, CONF_CHEATER_MODE, DOMAIN
+from .const import (
+    CONF_CHEATER_MODE,
+    CONF_DEVICE_ID,
+    CONF_PIN,
+    CONF_TOTP_SECRET,
+    CONF_VIN,
+    DOMAIN,
+)
 
 _LOGGER = logging.getLogger(__name__)
+
+# Magic PIN to enable cheater mode
+CHEATER_MODE_PIN = "VROOM"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -30,14 +41,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             CONF_TOTP_SECRET,
             description="TOTP secret obtained when setting up MFA via OnStar",
         ): str,
-    }
-)
-
-# Schema for the vehicle selection step
-VEHICLE_CONFIG_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_VIN): str,
-        vol.Optional(CONF_CHEATER_MODE, default=False): bool,
+        vol.Required(CONF_PIN, description="OnStar PIN (for remote commands)"): str,
     }
 )
 
@@ -65,7 +69,7 @@ async def get_vehicles(hass: HomeAssistant, user_input: dict[str, Any]) -> list:
             vin="",  # Not needed for initial account access
             totp_secret=user_input[CONF_TOTP_SECRET],
             token_location=token_location,
-            onstar_pin="",
+            onstar_pin=user_input.get(CONF_PIN, ""),
         )
         # Get account vehicles
         account_vehicles = await onstar.get_account_vehicles()
@@ -93,6 +97,15 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
+    # Check for cheater mode based on PIN
+    if data.get(CONF_PIN) == CHEATER_MODE_PIN:
+        data[CONF_CHEATER_MODE] = True
+        # Set a real PIN for OnStar API calls (empty string is fine)
+        actual_pin = ""
+    else:
+        data[CONF_CHEATER_MODE] = False
+        actual_pin = data.get(CONF_PIN, "")
+
     token_location = str(Path(hass.config.path(STORAGE_DIR)) / DOMAIN)
 
     try:
@@ -103,7 +116,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             vin=data[CONF_VIN],
             totp_secret=data[CONF_TOTP_SECRET],
             token_location=token_location,
-            onstar_pin="",
+            onstar_pin=actual_pin,
         )
         # Test connection by getting account vehicles
         await onstar.get_account_vehicles()
@@ -129,7 +142,7 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
         self._vehicles = []
 
     @classmethod
-    def async_get_options_flow(cls, config_entry):
+    def async_get_options_flow(cls, config_entry: Any) -> OnStarOptionsFlow:
         """Get the options flow for this handler."""
         return OnStarOptionsFlow(config_entry)
 
@@ -180,13 +193,12 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
-        # Create schema with vehicle options and cheater mode toggle
+        # Create schema with vehicle options
         vehicle_schema = vol.Schema(
             {
                 vol.Required(CONF_VIN): vol.In(
                     {vehicle["vin"]: vehicle["name"] for vehicle in self._vehicles}
                 ),
-                vol.Optional(CONF_CHEATER_MODE, default=False): bool,
             }
         )
 
@@ -201,22 +213,31 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
 class OnStarOptionsFlow(OptionsFlow):
     """Handle OnStar options."""
 
-    def __init__(self, config_entry):
+    def __init__(self, config_entry: Any) -> None:
         """Initialize options flow."""
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Update the config entry with the new cheater mode setting
+            # Check for cheater mode PIN
+            if user_input.get(CONF_PIN) == CHEATER_MODE_PIN:
+                user_input[CONF_CHEATER_MODE] = True
+            else:
+                user_input[CONF_CHEATER_MODE] = False
+
+            # Update the config entry with the new settings
             return self.async_create_entry(title="", data=user_input)
 
-        # Get current cheater mode status
-        cheater_mode = self.config_entry.data.get(CONF_CHEATER_MODE, False)
+        # Get current PIN
+        current_pin = self.config_entry.data.get(CONF_PIN, "")
 
+        # Show PIN in options but don't reveal if it's the special value
         options_schema = vol.Schema(
             {
-                vol.Optional(CONF_CHEATER_MODE, default=cheater_mode): bool,
+                vol.Required(CONF_PIN, default=current_pin): str,
             }
         )
 
