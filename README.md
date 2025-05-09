@@ -50,6 +50,7 @@ The integration currently supports:
 
 1. Go to Configuration > Integrations > Add Integration and search for "OnStar".
 2. Follow the on-screen instructions to complete the setup.
+3. During vehicle selection, you'll have the option to enable "Cheater Mode" (see below).
 
 ## Configuration
 
@@ -60,6 +61,26 @@ During the setup, you will need to provide:
 - Vehicle VIN (Vehicle Identification Number)
 - OnStar PIN (if required)
 - TOTP Secret (if required for two-factor authentication)
+
+### Cheater Mode
+
+The integration includes a "Cheater Mode" option that can be enabled during setup or changed later in the integration's options:
+
+- **Standard Mode**: The integration polls the OnStar API every 30 minutes to avoid rate limiting
+- **Cheater Mode**: The integration polls the OnStar API every 2 minutes
+  - If rate limiting (HTTP 429) occurs, the integration will automatically:
+    1. Create a new device ID
+    2. Delete existing tokens
+    3. Re-authenticate with OnStar
+    4. Continue polling with the new identity
+
+To change Cheater Mode setting after initial setup:
+1. Go to Configuration > Integrations
+2. Find your OnStar integration
+3. Click on "Configure" (gear icon)
+4. Toggle the "Cheater Mode" option as desired
+
+⚠️ **Warning**: Cheater Mode is intended for testing and development purposes. Excessive use of this feature may result in account limitations imposed by OnStar. Use at your own risk.
 
 ## Technical Details
 
@@ -105,8 +126,8 @@ The integration requests diagnostic data for:
 ## Notes
 
 This integration polls the OnStar API at regular intervals:
-- Diagnostic data is requested every 2 minutes
-- Location data is requested every 2 minutes
+- In standard mode: Every 30 minutes
+- In cheater mode: Every 2 minutes (with automatic rate limit handling)
 
 ## Future Development
 

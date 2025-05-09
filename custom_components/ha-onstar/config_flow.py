@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow as HAConfigFlow
+from homeassistant.config_entries import ConfigFlow as HAConfigFlow, OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import STORAGE_DIR
 from pyonstar import OnStar
 
-from .const import CONF_DEVICE_ID, CONF_TOTP_SECRET, CONF_VIN, DOMAIN
+from .const import CONF_DEVICE_ID, CONF_TOTP_SECRET, CONF_VIN, CONF_CHEATER_MODE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +30,14 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             CONF_TOTP_SECRET,
             description="TOTP secret obtained when setting up MFA via OnStar",
         ): str,
+    }
+)
+
+# Schema for the vehicle selection step
+VEHICLE_CONFIG_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_VIN): str,
+        vol.Optional(CONF_CHEATER_MODE, default=False): bool,
     }
 )
 
@@ -104,7 +112,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         raise CannotConnectError from ex
 
     # Return info that you want to store in the config entry.
-    return {"title": f"OnStar Vehicle ({data[CONF_VIN]})"}
+    title = f"OnStar Vehicle ({data[CONF_VIN]})"
+    if data.get(CONF_CHEATER_MODE, False):
+        title += " (Cheater Mode)"
+    return {"title": title}
 
 
 class ConfigFlow(HAConfigFlow, domain=DOMAIN):
@@ -116,6 +127,11 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._data = {}
         self._vehicles = []
+
+    @classmethod
+    def async_get_options_flow(cls, config_entry):
+        """Get the options flow for this handler."""
+        return OnStarOptionsFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -164,12 +180,13 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
-        # Create schema with vehicle options
+        # Create schema with vehicle options and cheater mode toggle
         vehicle_schema = vol.Schema(
             {
                 vol.Required(CONF_VIN): vol.In(
                     {vehicle["vin"]: vehicle["name"] for vehicle in self._vehicles}
-                )
+                ),
+                vol.Optional(CONF_CHEATER_MODE, default=False): bool,
             }
         )
 
@@ -178,6 +195,37 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
             data_schema=vehicle_schema,
             errors=errors,
             description_placeholders={"vehicle_count": str(len(self._vehicles))},
+        )
+
+
+class OnStarOptionsFlow(OptionsFlow):
+    """Handle OnStar options."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            # Update the config entry with the new cheater mode setting
+            return self.async_create_entry(title="", data=user_input)
+
+        # Get current cheater mode status
+        cheater_mode = self.config_entry.data.get(CONF_CHEATER_MODE, False)
+
+        options_schema = vol.Schema(
+            {
+                vol.Optional(CONF_CHEATER_MODE, default=cheater_mode): bool,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=options_schema,
+            description_placeholders={
+                "vehicle_vin": self.config_entry.data.get(CONF_VIN, "Unknown")
+            },
         )
 
 

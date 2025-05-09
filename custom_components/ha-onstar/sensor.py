@@ -203,7 +203,6 @@ class OnStarOdometerSensor(OnStarSensor):
             _LOGGER.debug("No diagnostics data available for odometer")
             return None
 
-        _LOGGER.debug("Processing diagnostics for odometer: %s", diagnostics)
         value = get_diagnostic_value(diagnostics, "ODOMETER")
 
         if value is None:
@@ -251,7 +250,6 @@ class OnStarBatteryLevelSensor(OnStarSensor):
             _LOGGER.debug("No diagnostics data available for battery level")
             return None
 
-        _LOGGER.debug("Processing diagnostics for battery level: %s", diagnostics)
         value = get_diagnostic_value(diagnostics, "EV BATTERY LEVEL")
 
         if value is None:

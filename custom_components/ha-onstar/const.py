@@ -8,6 +8,7 @@ DOMAIN = "ha-onstar"
 CONF_DEVICE_ID = "device_id"
 CONF_VIN = "vin"
 CONF_TOTP_SECRET = "totp_secret"  # noqa: S105
+CONF_CHEATER_MODE = "cheater_mode"
 
 # Platforms
 PLATFORMS = [
@@ -22,10 +23,16 @@ SCAN_INTERVAL = 1800  # seconds (30 minutes)
 
 # Refresh interval for diagnostics data (which is rate limited)
 # 30 minutes between diagnostics calls to avoid rate limiting
-DIAGNOSTICS_SCAN_INTERVAL = 120  # seconds (2 minutes)
+DIAGNOSTICS_SCAN_INTERVAL = 1800  # seconds (30 minutes)
 
 # Refresh interval for location data (which might be rate limited)
-LOCATION_SCAN_INTERVAL = 120  # seconds (2 minutes)
+LOCATION_SCAN_INTERVAL = 1800  # seconds (30 minutes)
+
+# Cheater mode settings
+CHEATER_MODE_SCAN_INTERVAL = 120  # seconds (2 minutes)
+
+# Rate limit handling
+STANDARD_MODE_BACKOFF_TIME = 86400  # seconds (24 hours)
 
 # Default values
 DEFAULT_NAME = "ha-onstar"

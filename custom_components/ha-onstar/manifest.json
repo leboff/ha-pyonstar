@@ -9,7 +9,7 @@
   "homekit": {},
   "iot_class": "cloud_polling",
   "quality_scale": "bronze",
-  "requirements": ["pyonstar==0.0.10"],
+  "requirements": ["pyonstar==0.0.12"],
   "ssdp": [],
   "zeroconf": []
 }

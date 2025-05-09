@@ -14,7 +14,8 @@
         "title": "Select your OnStar vehicle",
         "description": "Found {vehicle_count} vehicles in your OnStar account. Select the vehicle you want to add.",
         "data": {
-          "vin": "Select Vehicle"
+          "vin": "Select Vehicle",
+          "cheater_mode": "Enable Cheater Mode (more frequent updates, may cause rate limiting)"
         }
       }
     },
@@ -25,6 +26,17 @@
     },
     "abort": {
       "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure OnStar Integration",
+        "description": "Update settings for your OnStar vehicle (VIN: {vehicle_vin})",
+        "data": {
+          "cheater_mode": "Enable Cheater Mode (more frequent updates, may cause rate limiting)"
+        }
+      }
     }
   },
   "entity": {
