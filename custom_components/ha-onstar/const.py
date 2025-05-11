@@ -3,7 +3,7 @@
 from homeassistant.const import Platform
 
 DOMAIN = "ha-onstar"
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 
 # Configuration constants
 CONF_DEVICE_ID = "device_id"

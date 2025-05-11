@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Completion Time Fix
+
+
 ## 0.2.1
 
 - Bumped pyonstar version
