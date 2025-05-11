@@ -23,18 +23,27 @@ if TYPE_CHECKING:
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricPotential,
+    UnitOfEnergy,
     UnitOfLength,
     UnitOfPressure,
 )
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    KILOWATT_HOURS_PER_100MI,
+    KWH_PER_100KM_TO_KWH_PER_100MI,
+    MPGE,
+)
 from .helpers import (
     calculate_next_occurrence_timestamp,
     get_diagnostic_response,
     get_diagnostic_value,
 )
+
+# Add conversion constant
+KMPLE_TO_MPGE = 2.352  # 1 kmple = 2.352 MPGe
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -98,6 +107,12 @@ async def async_setup_entry(
                 OnStarLastTripEfficiencySensor(coordinator, vin),
                 OnStarLifetimeEfficiencySensor(coordinator, vin),
                 OnStarEvRangeSensor(coordinator, vin),
+                OnStarElectricEconomySensor(coordinator, vin),
+                OnStarLifetimeMPGESensor(coordinator, vin),
+                OnStarLifetimeEnergyUsedSensor(coordinator, vin),
+                OnStarProjectedEvRangeSensor(coordinator, vin),
+                OnStarBatteryPreconditioningStatusSensor(coordinator, vin),
+                OnStarCabinPreconditioningTempSensor(coordinator, vin),
             ]
         )
         _LOGGER.debug("Created EV-specific sensors for vehicle: %s", vin)
@@ -482,7 +497,7 @@ class OnStarLastTripEfficiencySensor(OnStarSensor):
     """Representation of an OnStar last trip efficiency sensor."""
 
     _attr_name = "Last Trip Efficiency"
-    _attr_native_unit_of_measurement = "kmple"  # kilometers per liter equivalent
+    _attr_native_unit_of_measurement = MPGE
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
@@ -504,7 +519,9 @@ class OnStarLastTripEfficiencySensor(OnStarSensor):
             _LOGGER.debug("No diagnostics data available for last trip efficiency")
             return None
 
-        value = get_diagnostic_value(diagnostics, "LAST TRIP ELECTRIC ECON")
+        value = get_diagnostic_value(
+            diagnostics, "LAST TRIP FUEL ECONOMY", "LAST TRIP ELECTRIC ECON"
+        )
 
         if value is None:
             _LOGGER.debug("No last trip efficiency data found in diagnostics")
@@ -512,19 +529,21 @@ class OnStarLastTripEfficiencySensor(OnStarSensor):
 
         try:
             float_value = float(value)
-            _LOGGER.debug("Found last trip efficiency: %s kmple", float_value)
+            # Convert kmple to MPGe and round to 1 decimal
+            mpge = round(float_value * KMPLE_TO_MPGE, 1)
+            _LOGGER.debug("Found last trip efficiency: %s MPGe", mpge)
         except (ValueError, TypeError):
             _LOGGER.debug("Could not convert last trip efficiency to float: %s", value)
             return None
         else:
-            return float_value
+            return mpge
 
 
 class OnStarLifetimeEfficiencySensor(OnStarSensor):
     """Representation of an OnStar lifetime efficiency sensor."""
 
     _attr_name = "Lifetime Efficiency"
-    _attr_native_unit_of_measurement = "kWh/100km"
+    _attr_native_unit_of_measurement = KILOWATT_HOURS_PER_100MI
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
@@ -556,12 +575,14 @@ class OnStarLifetimeEfficiencySensor(OnStarSensor):
 
         try:
             float_value = float(value)
-            _LOGGER.debug("Found lifetime efficiency: %s kWh/100km", float_value)
+            # Convert kWh/100km to kWh/100mi and round to 1 decimal
+            kwh_per_100mi = round(float_value * KWH_PER_100KM_TO_KWH_PER_100MI, 1)
+            _LOGGER.debug("Found lifetime efficiency: %s kWh/100mi", kwh_per_100mi)
         except (ValueError, TypeError):
             _LOGGER.debug("Could not convert lifetime efficiency to float: %s", value)
             return None
         else:
-            return float_value
+            return kwh_per_100mi
 
 
 class OnStarTirePressureSensor(OnStarSensor):
@@ -677,6 +698,285 @@ class OnStarEvRangeSensor(OnStarSensor):
             _LOGGER.debug("Found EV range: %s km", float_value)
         except (ValueError, TypeError):
             _LOGGER.debug("Could not convert EV range to float: %s", value)
+            return None
+        else:
+            return float_value
+
+
+class OnStarElectricEconomySensor(OnStarSensor):
+    """Representation of an OnStar electric economy sensor."""
+
+    _attr_name = "Electric Economy"
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vin, "electric_economy")
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self._get_diagnostics()
+        await super().async_update()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the electric economy."""
+        _LOGGER.debug("Getting electric economy for: %s", self._vin)
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
+            _LOGGER.debug("No diagnostics data available for electric economy")
+            return None
+
+        value = get_diagnostic_value(
+            diagnostics, "ENERGY EFFICIENCY", "ELECTRIC ECONOMY"
+        )
+
+        if value is None:
+            _LOGGER.debug("No electric economy data found in diagnostics")
+            return None
+
+        try:
+            float_value = float(value)
+            _LOGGER.debug("Found electric economy: %s kWh", float_value)
+        except (ValueError, TypeError):
+            _LOGGER.debug("Could not convert electric economy to float: %s", value)
+            return None
+        else:
+            return float_value
+
+
+class OnStarLifetimeMPGESensor(OnStarSensor):
+    """Representation of an OnStar lifetime MPGE sensor."""
+
+    _attr_name = "Lifetime MPGE"
+    _attr_native_unit_of_measurement = MPGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vin, "lifetime_mpge")
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self._get_diagnostics()
+        await super().async_update()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the lifetime MPGE."""
+        _LOGGER.debug("Getting lifetime MPGE for: %s", self._vin)
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
+            _LOGGER.debug("No diagnostics data available for lifetime MPGE")
+            return None
+
+        value = get_diagnostic_value(diagnostics, "ENERGY EFFICIENCY", "LIFETIME MPGE")
+
+        if value is None:
+            _LOGGER.debug("No lifetime MPGE data found in diagnostics")
+            return None
+
+        try:
+            float_value = float(value)
+            # Convert kmple to MPGe and round to 1 decimal
+            mpge = round(float_value * KMPLE_TO_MPGE, 1)
+            _LOGGER.debug("Found lifetime MPGE: %s MPGe", mpge)
+        except (ValueError, TypeError):
+            _LOGGER.debug("Could not convert lifetime MPGE to float: %s", value)
+            return None
+        else:
+            return mpge
+
+
+class OnStarLifetimeEnergyUsedSensor(OnStarSensor):
+    """Representation of an OnStar lifetime energy used sensor."""
+
+    _attr_name = "Lifetime Energy Used"
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vin, "lifetime_energy_used")
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self._get_diagnostics()
+        await super().async_update()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the lifetime energy used."""
+        _LOGGER.debug("Getting lifetime energy used for: %s", self._vin)
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
+            _LOGGER.debug("No diagnostics data available for lifetime energy used")
+            return None
+
+        value = get_diagnostic_value(
+            diagnostics, "LIFETIME ENERGY USED", "LIFETIME ENERGY USED"
+        )
+
+        if value is None:
+            _LOGGER.debug("No lifetime energy used data found in diagnostics")
+            return None
+
+        try:
+            float_value = float(value)
+            _LOGGER.debug("Found lifetime energy used: %s kWh", float_value)
+        except (ValueError, TypeError):
+            _LOGGER.debug("Could not convert lifetime energy used to float: %s", value)
+            return None
+        else:
+            return float_value
+
+
+class OnStarProjectedEvRangeSensor(OnStarSensor):
+    """Representation of an OnStar projected EV range sensor."""
+
+    _attr_name = "Projected EV Range at Target"
+    _attr_native_unit_of_measurement = UnitOfLength.KILOMETERS
+    _attr_device_class = SensorDeviceClass.DISTANCE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vin, "projected_ev_range")
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self._get_diagnostics()
+        await super().async_update()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the projected EV range."""
+        _LOGGER.debug("Getting projected EV range for: %s", self._vin)
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
+            _LOGGER.debug("No diagnostics data available for projected EV range")
+            return None
+
+        value = get_diagnostic_value(
+            diagnostics,
+            "TARGET CHARGE LEVEL SETTINGS",
+            "PROJECTED EV RANGE GENERAL AWAY TARGET CHARGE SET",
+        )
+
+        if value is None:
+            _LOGGER.debug("No projected EV range data found in diagnostics")
+            return None
+
+        try:
+            float_value = float(value)
+            _LOGGER.debug("Found projected EV range: %s km", float_value)
+        except (ValueError, TypeError):
+            _LOGGER.debug("Could not convert projected EV range to float: %s", value)
+            return None
+        else:
+            return float_value
+
+
+class OnStarBatteryPreconditioningStatusSensor(OnStarSensor):
+    """Representation of an OnStar battery preconditioning status sensor."""
+
+    _attr_name = "Battery Preconditioning Status"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options: ClassVar[list[str]] = ["enabled", "disabled", "unknown"]
+
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vin, "battery_preconditioning_status")
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self._get_diagnostics()
+        await super().async_update()
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the battery preconditioning status."""
+        _LOGGER.debug("Getting battery preconditioning status for: %s", self._vin)
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
+            _LOGGER.debug(
+                "No diagnostics data available for battery preconditioning status"
+            )
+            return None
+
+        value = get_diagnostic_value(
+            diagnostics,
+            "HIGH VOLTAGE BATTERY PRECONDITIONING STATUS",
+            "HIGH VOLTAGE BATTERY PRECONDITIONING STATUS",
+        )
+
+        if value is None:
+            _LOGGER.debug("No battery preconditioning status data found in diagnostics")
+            return None
+
+        _LOGGER.debug("Found battery preconditioning status: %s", value)
+        state_map = {
+            "ENABLED": "enabled",
+            "DISABLED": "disabled",
+        }
+        return state_map.get(value, "unknown")
+
+
+class OnStarCabinPreconditioningTempSensor(OnStarSensor):
+    """Representation of an OnStar cabin preconditioning temperature sensor."""
+
+    _attr_name = "Cabin Preconditioning Temperature"
+    _attr_native_unit_of_measurement = "°C"
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: DataUpdateCoordinator, vin: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, vin, "cabin_preconditioning_temp")
+
+    async def async_update(self) -> None:
+        """Update the sensor."""
+        await self._get_diagnostics()
+        await super().async_update()
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the cabin preconditioning temperature."""
+        _LOGGER.debug("Getting cabin preconditioning temperature for: %s", self._vin)
+
+        diagnostics = get_diagnostic_response(self.coordinator.data)
+        if diagnostics is None:
+            _LOGGER.debug(
+                "No diagnostics data available for cabin preconditioning temperature"
+            )
+            return None
+
+        value = get_diagnostic_value(
+            diagnostics,
+            "CABIN PRECONDITIONING TEMP CUSTOM SETTING",
+            "SCHEDULED CABIN PRECONDTION CUSTOM SET VALUE",
+        )
+
+        if value is None:
+            _LOGGER.debug(
+                "No cabin preconditioning temperature data found in diagnostics"
+            )
+            return None
+
+        try:
+            float_value = float(value)
+            _LOGGER.debug("Found cabin preconditioning temperature: %s °C", float_value)
+        except (ValueError, TypeError):
+            _LOGGER.debug(
+                "Could not convert cabin preconditioning temperature to float: %s",
+                value,
+            )
             return None
         else:
             return float_value

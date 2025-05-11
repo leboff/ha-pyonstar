@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -402,6 +403,10 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
             "TIRE PRESSURE",
             "GET CHARGE MODE",
             "VEHICLE RANGE",
+            "LIFETIME ENERGY USED",
+            "HIGH VOLTAGE BATTERY PRECONDITIONING STATUS",
+            "CABIN PRECONDITIONING TEMP CUSTOM SETTING",
+            "TARGET CHARGE LEVEL SETTINGS",
         ]
         _LOGGER.debug("Requesting diagnostics with items: %s", diagnostics_items)
 
@@ -498,12 +503,14 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
             # Get vehicle account data first if needed
             await self.onstar.get_account_vehicles()
 
-            # Get vehicle location using cache-aware method
-            await self.get_location()
+            # Run location and diagnostics updates in parallel
+            location_task = self.get_location()
+            diagnostics_task = self.get_diagnostics()
 
-            # Also update diagnostics data on each cycle
-            # Use get_diagnostics() to respect rate limiting
-            await self.get_diagnostics()
+            # Use gather to run both tasks concurrently and handle errors independently
+            await asyncio.gather(
+                location_task, diagnostics_task, return_exceptions=True
+            )
 
             # Return combined data
             return {
