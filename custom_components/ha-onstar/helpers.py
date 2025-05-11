@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import zoneinfo  # For timezone support
 from datetime import datetime, timedelta
 from typing import Any, TypeVar
 
@@ -179,7 +178,7 @@ def calculate_next_occurrence_timestamp(
     """
     try:
         # Get current date in local timezone
-        now = datetime.now(tz=zoneinfo.ZoneInfo("localtime"))
+        now = datetime.now().astimezone()
 
         # Parse the day of week to integer (0=Monday, 6=Sunday)
         target_weekday = _DAYS_MAP.get(day)
@@ -200,11 +199,9 @@ def calculate_next_occurrence_timestamp(
             days_ahead = 7  # Target time already passed today, use next week
 
         # Calculate the target date
-        target_date = datetime(
-            now.year, now.month, now.day, tzinfo=zoneinfo.ZoneInfo("localtime")
-        ).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
-            days=days_ahead
-        )
+        target_date = datetime(now.year, now.month, now.day, tzinfo=now.tzinfo).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(days=days_ahead)
 
         # Set the target time
         target_datetime = target_date.replace(hour=int(hour), minute=int(minute))
