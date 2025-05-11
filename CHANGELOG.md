@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Bumped pyonstar version
+
+
 ## 0.2.0
 
 - Updated README with additional credits for OnStarJS libraries

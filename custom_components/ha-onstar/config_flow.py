@@ -41,7 +41,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             CONF_TOTP_SECRET,
             description="TOTP secret obtained when setting up MFA via OnStar",
         ): str,
-        vol.Required(CONF_PIN, description="OnStar PIN (for remote commands)"): str,
+        vol.Optional(CONF_PIN, description="OnStar PIN (for remote commands)"): str,
     }
 )
 
