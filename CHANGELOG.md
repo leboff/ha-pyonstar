@@ -1,8 +1,27 @@
 # Changelog
 
+## 0.3.0
+
+- Fixed incorrect kmple to MPGe conversion factor in efficiency sensors
+- Added parallel execution of location and diagnostics updates to improve reliability
+- Added support for battery preconditioning status and cabin preconditioning temperature sensors
+- Added support for projected EV range at target charge level
+- Added support for lifetime energy used sensor
+- Added support for lifetime MPGe sensor
+- Added support for electric economy sensor
+
+
 ## 0.2.2
 
 - Completion Time Fix
+- Added support for EV range sensor
+- Added support for charger power level sensor
+- Added support for plug voltage sensor
+- Added support for plug state sensor
+- Added support for charge state sensor
+- Added support for battery level sensor
+- Added support for odometer sensor
+- Added support for tire pressure sensors
 
 
 ## 0.2.1
@@ -32,4 +51,3 @@ Initial release
 
 - OnStar integration with basic vehicle data
 - Support for vehicle location and diagnostics
-- Cheater mode implementation to work around rate limiting

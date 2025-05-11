@@ -15,6 +15,6 @@
     "pyonstar==0.0.14"
   ],
   "ssdp": [],
-  "version": "0.2.2",
+  "version": "0.3.0",
   "zeroconf": []
 }
