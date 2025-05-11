@@ -178,8 +178,8 @@ def calculate_next_occurrence_timestamp(
 
     """
     try:
-        # Get current date in UTC
-        now = datetime.now(tz=zoneinfo.ZoneInfo("UTC"))
+        # Get current date in local timezone
+        now = datetime.now(tz=zoneinfo.ZoneInfo("localtime"))
 
         # Parse the day of week to integer (0=Monday, 6=Sunday)
         target_weekday = _DAYS_MAP.get(day)
@@ -201,7 +201,7 @@ def calculate_next_occurrence_timestamp(
 
         # Calculate the target date
         target_date = datetime(
-            now.year, now.month, now.day, tzinfo=zoneinfo.ZoneInfo("UTC")
+            now.year, now.month, now.day, tzinfo=zoneinfo.ZoneInfo("localtime")
         ).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
             days=days_ahead
         )
