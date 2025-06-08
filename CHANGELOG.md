@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- fix indentation
+
+
 ## 0.4.0
 
 - Handle auth redirects
