@@ -66,6 +66,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get an httpx client that handles SSL cert loading in an executor
     httpx_client = get_async_client(hass)
 
+    # Configure the client to handle redirects properly
+    httpx_client.follow_redirects = True
+    httpx_client.max_redirects = 5
+
     onstar = OnStar(
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
@@ -501,7 +505,7 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Beginning OnStar data update")
         try:
             # Get vehicle account data first if needed
-            await self.onstar.get_account_vehicles()
+                    await self.onstar.get_account_vehicles()
 
             # Run location and diagnostics updates in parallel
             location_task = self.get_location()
