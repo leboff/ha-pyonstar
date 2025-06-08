@@ -505,7 +505,7 @@ class OnStarDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Beginning OnStar data update")
         try:
             # Get vehicle account data first if needed
-                    await self.onstar.get_account_vehicles()
+            await self.onstar.get_account_vehicles()
 
             # Run location and diagnostics updates in parallel
             location_task = self.get_location()
