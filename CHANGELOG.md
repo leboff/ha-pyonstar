@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Handle auth redirects
+
+
 ## 0.3.0
 
 - Fixed incorrect kmple to MPGe conversion factor in efficiency sensors
