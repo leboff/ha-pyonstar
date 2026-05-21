@@ -18,6 +18,13 @@
           "vin": "Select Vehicle",
           "cheater_mode": "Enable Cheater Mode (more frequent updates, may cause rate limiting)"
         }
+      },
+      "manual_vin": {
+        "title": "Enter Vehicle VIN",
+        "description": "The GM vehicle listing API is currently unavailable. Enter your vehicle's VIN manually. You can find it on your dashboard, driver-side door jamb, or vehicle registration.",
+        "data": {
+          "vin": "Vehicle Identification Number (VIN)"
+        }
       }
     },
     "error": {

@@ -8,15 +8,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
+
 from homeassistant.config_entries import ConfigFlow as HAConfigFlow
 from homeassistant.config_entries import OptionsFlow
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.helpers.storage import STORAGE_DIR
+
+from homeassistant.exceptions import HomeAssistantError
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
     from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.storage import STORAGE_DIR
+
 from pyonstar import OnStar
 
 from .const import (
@@ -48,10 +51,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 async def get_vehicles(hass: HomeAssistant, user_input: dict[str, Any]) -> list:
     """Retrieve vehicles from OnStar account."""
-    # Generate a UUID4 for device_id
     device_id = str(uuid.uuid4())
     user_input[CONF_DEVICE_ID] = device_id
-
     token_location = str(Path(hass.config.path(STORAGE_DIR)) / DOMAIN)
 
     def check_vehicles(account_data: dict[str, Any]) -> dict[str, Any]:
@@ -66,18 +67,15 @@ async def get_vehicles(hass: HomeAssistant, user_input: dict[str, Any]) -> list:
             username=user_input[CONF_USERNAME],
             password=user_input[CONF_PASSWORD],
             device_id=device_id,
-            vin="",  # Not needed for initial account access
+            vin="",
             totp_secret=user_input[CONF_TOTP_SECRET],
             token_location=token_location,
             onstar_pin=user_input.get(CONF_PIN, ""),
         )
-        # Get account vehicles
-        account_vehicles = await onstar.get_account_vehicles()
 
-        # Check vehicles using inner function
+        account_vehicles = await onstar.get_account_vehicles()
         check_vehicles(account_vehicles)
 
-        # Extract the list of vehicles with relevant details using a list comprehension
         return [
             {
                 "vin": vehicle["vin"],
@@ -85,22 +83,15 @@ async def get_vehicles(hass: HomeAssistant, user_input: dict[str, Any]) -> list:
             }
             for vehicle in account_vehicles["vehicles"]["vehicle"]
         ]
-
     except Exception as ex:
         _LOGGER.exception("Error connecting to OnStar")
         raise CannotConnectError from ex
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """
-    Validate the user input allows us to connect.
-
-    Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
-    """
-    # Check for cheater mode based on PIN
+    """Validate the user input allows us to connect."""
     if data.get(CONF_PIN) == CHEATER_MODE_PIN:
         data[CONF_CHEATER_MODE] = True
-        # Set a real PIN for OnStar API calls (empty string is fine)
         actual_pin = ""
     else:
         data[CONF_CHEATER_MODE] = False
@@ -118,13 +109,36 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             token_location=token_location,
             onstar_pin=actual_pin,
         )
-        # Test connection by getting account vehicles
+
         await onstar.get_account_vehicles()
+
     except Exception as ex:
         _LOGGER.exception("Error connecting to OnStar")
         raise CannotConnectError from ex
 
-    # Return info that you want to store in the config entry.
+    title = f"OnStar Vehicle ({data[CONF_VIN]})"
+    if data.get(CONF_CHEATER_MODE, False):
+        title += " (Cheater Mode)"
+
+    return {"title": title}
+
+
+async def validate_input_no_api(
+    hass: HomeAssistant, data: dict[str, Any]
+) -> dict[str, Any]:
+    """Build config entry data without making a GM API call.
+
+    Used when authentication succeeds via cached tokens but the GM vehicle
+    listing API is unavailable (e.g. the v1 endpoint has been disabled).
+    The integration will still operate normally for diagnostics and commands
+    once the API is restored or updated.
+    """
+    if data.get(CONF_PIN) == CHEATER_MODE_PIN:
+        data[CONF_CHEATER_MODE] = True
+        data[CONF_PIN] = ""
+    else:
+        data[CONF_CHEATER_MODE] = False
+
     title = f"OnStar Vehicle ({data[CONF_VIN]})"
     if data.get(CONF_CHEATER_MODE, False):
         title += " (Cheater Mode)"
@@ -154,15 +168,30 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                # Get vehicles from the account
                 self._vehicles = await get_vehicles(self.hass, user_input)
                 self._data = user_input
-
-                # If we got vehicles, proceed to selection step
                 return await self.async_step_select_vehicle()
 
             except CannotConnectError:
+                # If a cached microsoft_tokens.json exists, authentication
+                # likely succeeded but the GM vehicle listing API endpoint is
+                # unavailable (e.g. deprecated v1 endpoint returning 404).
+                # Fall back to manual VIN entry so setup can still complete.
+                token_path = (
+                    Path(self.hass.config.path(STORAGE_DIR))
+                    / DOMAIN
+                    / "microsoft_tokens.json"
+                )
+                if token_path.exists():
+                    _LOGGER.info(
+                        "GM vehicle listing API unavailable but cached tokens found "
+                        "— falling back to manual VIN entry"
+                    )
+                    self._data = user_input  # device_id already set by get_vehicles()
+                    return await self.async_step_manual_vin()
+
                 errors["base"] = "cannot_connect"
+
             except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -179,12 +208,8 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                # Merge the selected vehicle with existing data
                 self._data.update(user_input)
-
-                # Validate the input with the selected VIN
                 info = await validate_input(self.hass, self._data)
-
                 return self.async_create_entry(title=info["title"], data=self._data)
 
             except CannotConnectError:
@@ -193,7 +218,6 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
-        # Create schema with vehicle options
         vehicle_schema = vol.Schema(
             {
                 vol.Required(CONF_VIN): vol.In(
@@ -209,6 +233,33 @@ class ConfigFlow(HAConfigFlow, domain=DOMAIN):
             description_placeholders={"vehicle_count": str(len(self._vehicles))},
         )
 
+    async def async_step_manual_vin(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Fallback: manually enter VIN when the GM vehicle listing API is unavailable.
+
+        Triggered automatically when microsoft_tokens.json exists (authentication
+        succeeded) but the GM /account/vehicles endpoint is not reachable.
+        The VIN can be found on the dashboard, driver-side door jamb, or vehicle
+        registration.
+        """
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            try:
+                self._data.update(user_input)
+                info = await validate_input_no_api(self.hass, self._data)
+                return self.async_create_entry(title=info["title"], data=self._data)
+            except Exception:
+                _LOGGER.exception("Unexpected exception during manual VIN setup")
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="manual_vin",
+            data_schema=vol.Schema({vol.Required(CONF_VIN): str}),
+            errors=errors,
+        )
+
 
 class OnStarOptionsFlow(OptionsFlow):
     """Handle OnStar options."""
@@ -222,19 +273,15 @@ class OnStarOptionsFlow(OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Check for cheater mode PIN
             if user_input.get(CONF_PIN) == CHEATER_MODE_PIN:
                 user_input[CONF_CHEATER_MODE] = True
             else:
                 user_input[CONF_CHEATER_MODE] = False
 
-            # Update the config entry with the new settings
             return self.async_create_entry(title="", data=user_input)
 
-        # Get current PIN
         current_pin = self.config_entry.data.get(CONF_PIN, "")
 
-        # Show PIN in options but don't reveal if it's the special value
         options_schema = vol.Schema(
             {
                 vol.Required(CONF_PIN, default=current_pin): str,

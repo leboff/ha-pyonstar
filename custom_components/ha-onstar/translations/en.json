@@ -19,6 +19,20 @@
                 },
                 "description": "Set up your OnStar account to integrate with Home Assistant",
                 "title": "Connect to OnStar"
+            },
+            "select_vehicle": {
+                "title": "Select your OnStar vehicle",
+                "description": "Found {vehicle_count} vehicles in your OnStar account. Select the vehicle you want to add.",
+                "data": {
+                    "vin": "Select Vehicle"
+                }
+            },
+            "manual_vin": {
+                "title": "Enter Vehicle VIN",
+                "description": "The GM vehicle listing API is currently unavailable. Enter your vehicle's VIN manually. You can find it on your dashboard, driver-side door jamb, or vehicle registration.",
+                "data": {
+                    "vin": "Vehicle Identification Number (VIN)"
+                }
             }
         }
     },
